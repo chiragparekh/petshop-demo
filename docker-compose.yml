@@ -1,0 +1,87 @@
+version: "3"
+
+services:
+    app:
+        build:
+            context: ./docker
+            dockerfile: nginx.dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        ports:
+            - "80:80"
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - php
+            - mysql
+        networks:
+            - petshop
+
+    php:
+        build:
+            context: ./docker
+            dockerfile: php.dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        ports:
+            - "9000:9000"
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - petshop
+
+    mysql:
+        image: "mysql/mysql-server:8.0"
+        ports:
+            - "${FORWARD_DB_PORT:-3306}:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+            MYSQL_DATABASE: "${DB_DATABASE}"
+            MYSQL_USER: "${DB_USERNAME}"
+            MYSQL_PASSWORD: "${DB_PASSWORD}"
+        volumes:
+            - "mysql:/var/lib/mysql"
+        networks:
+            - petshop
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
+            retries: 3
+            timeout: 5s
+
+    composer:
+        build:
+            context: ./docker
+            dockerfile: php.dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - php
+        entrypoint: ["composer", "--ignore-platform-reqs"]
+        networks:
+            - petshop
+
+    artisan:
+        build:
+            context: ./docker
+            dockerfile: php.dockerfile
+            args:
+                - UID=${UID:-1000}
+                - GID=${GID:-1000}
+        volumes:
+            - ./:/var/www/html
+        depends_on:
+            - mysql
+        entrypoint: ["php", "/var/www/html/artisan"]
+        networks:
+            - petshop
+volumes:
+    mysql:
+
+networks:
+    petshop:
+        driver: bridge
