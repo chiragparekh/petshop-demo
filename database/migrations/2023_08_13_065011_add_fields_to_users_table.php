@@ -21,7 +21,7 @@ return new class extends Migration
             $table->tinyInteger('is_admin')->default(0)->after('id');
             $table->string('last_name')->after('id');
             $table->string('first_name')->after('id');
-            $table->uuid('uuid')->after('id');
+            $table->uuid('uuid')->index()->after('id');
         });
     }
 
