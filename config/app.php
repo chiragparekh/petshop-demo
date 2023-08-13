@@ -185,4 +185,7 @@ return [
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 
+    'jwt' => [
+        'key' => env('JWT_KEY')
+    ]
 ];
