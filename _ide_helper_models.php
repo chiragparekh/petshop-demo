@@ -12,6 +12,17 @@
 
 namespace App\Models{
 /**
+ * App\Models\Brand
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder|Brand newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Brand newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Brand query()
+ */
+	class Brand extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
  * App\Models\Category
  *
  * @property int $id
