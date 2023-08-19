@@ -9,6 +9,7 @@ use App\Models\OrderStatus;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,7 +24,7 @@ class OrderFactory extends Factory
      */
     public function definition(): array
     {
-        $products = Product::factory()->count(3)->create()->map(fn(Product $product) => new OrderProductData(
+        $products = Product::factory()->count(random_int(3, 10))->create()->map(fn(Product $product) => new OrderProductData(
             productUuid: $product->uuid,
             quantity: $this->faker->numberBetween(2, 5)
         ))->toArray();
@@ -39,6 +40,8 @@ class OrderFactory extends Factory
             ),
             'delivery_fee' => $this->faker->randomFloat(2, 10, 20),
             'amount' => $this->faker->randomFloat(2, 100, 300),
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now(),
         ];
     }
 }

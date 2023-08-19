@@ -26,6 +26,10 @@ class Auth
     {
         $token = $request->bearerToken();
 
+        if(! $token) {
+            return $this->unauthorized();
+        }
+
         $token = $this->jwtService->parse($token);
 
         if(! $token) {
