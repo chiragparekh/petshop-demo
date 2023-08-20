@@ -35,14 +35,12 @@ class OrderDashboardControllerTest extends TestCase
 
     private function createPaidOrders(Carbon $startDate, Carbon $endDate, int $count = 5): Collection
     {
-        $orderStatuses = OrderStatus::all();
-
         return Order::factory()->count($count)
             ->state(new Sequence(
                 fn (Sequence $sequence) => [
                     'created_at' => $this->faker->dateTimeBetween(
-                        Carbon::now()->startOfDay(),
-                        Carbon::now()->endOfDay(),
+                        $startDate,
+                        $endDate,
                     )
                 ],
             ))
@@ -217,5 +215,168 @@ class OrderDashboardControllerTest extends TestCase
         $this->assertEquals($responseData['data']['total_earnings'], format_number($paidOrders->sum('amount')));
         $this->assertEquals($responseData['data']['potential_earnings'], format_number($unpaidOrders->sum('amount')));
         $this->assertEquals($responseData['data']['total_orders'], $paidOrders->count() + $unpaidOrders->count());
+    }
+
+    public function test_orders_dashboard_accessible_to_admin_users_only()
+    {
+        $user = User::factory()->create([
+            'is_admin' => 0
+        ]);
+
+        $token = app(JwtService::class)->generate($user->uuid);
+
+        $paramsData = http_build_query([
+            'page' => 1,
+            'limit' => 15,
+            'desc' => 1,
+            'dateRange' => [
+                'from' => Carbon::now()->startOfDay()->format('Y-m-d'),
+                'to' => Carbon::now()->endOfDay()->format('Y-m-d'),
+            ]
+        ]);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/orders/dashboard?'. $paramsData)
+            ->assertUnauthorized();
+    }
+
+    public function test_it_returns_orders_for_provided_period_only()
+    {
+        list('user' => $user, 'token' => $token) = $this->setupAdminUserAndToken();
+
+        // run the seeder for the order statuses
+        $this->seed();
+
+        // create orders for the past month
+        $this->createPaidOrders(
+            startDate: Carbon::now()->subMonths(3)->startOfDay(),
+            endDate: Carbon::now()->subMonths(3)->endOfDay(),
+            count: 10,
+        );
+
+        // retrieve orders of the current month should gives us zero orders
+        $paramsData = http_build_query([
+            'page' => 1,
+            'limit' => 15,
+            'desc' => 1,
+            'fixRange' => 'monthly'
+        ]);
+
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/orders/dashboard?'. $paramsData)
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    'total_earnings',
+                    'potential_earnings',
+                    'total_orders',
+                    'chart_data',
+                    'orders',
+                ]
+            ]);
+
+        $this->assertEquals(0, $response->json()['data']['total_orders']);
+
+        // go back to 3 months to see if returns that orders
+        $this->travel(-3)->months();
+
+        // retrieve orders of the current month should gives us zero orders
+        $paramsData = http_build_query([
+            'page' => 1,
+            'limit' => 15,
+            'desc' => 1,
+            'fixRange' => 'monthly'
+        ]);
+
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/orders/dashboard?'. $paramsData)
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    'total_earnings',
+                    'potential_earnings',
+                    'total_orders',
+                    'chart_data',
+                    'orders',
+                ]
+            ]);
+
+        $this->assertEquals(10, $response->json()['data']['total_orders']);
+    }
+
+    public function test_it_returns_correct_order_earnings_for_the_specified_period()
+    {
+        list('user' => $user, 'token' => $token) = $this->setupAdminUserAndToken();
+
+        // run the seeder for the order statuses
+        $this->seed();
+
+        // create only paid orders
+        $this->createPaidOrders(
+            startDate: Carbon::now()->startOfMonth()->startOfDay(),
+            endDate: Carbon::now()->endOfMonth()->endOfDay(),
+            count: 10,
+        );
+
+        // retrieve orders of the current month should gives us zero orders
+        $paramsData = http_build_query([
+            'page' => 1,
+            'limit' => 15,
+            'desc' => 1,
+            'fixRange' => 'monthly'
+        ]);
+
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/orders/dashboard?'. $paramsData)
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    'total_earnings',
+                    'potential_earnings',
+                    'total_orders',
+                    'chart_data',
+                    'orders',
+                ]
+            ]);
+
+        $this->assertEquals(format_number(Order::sum('amount')), $response->json()['data']['total_earnings']);
+    }
+
+    public function test_it_returns_correct_order_potential_earnings_for_the_specified_period()
+    {
+        list('user' => $user, 'token' => $token) = $this->setupAdminUserAndToken();
+
+        // run the seeder for the order statuses
+        $this->seed();
+
+        // create only unpaid orders
+        $this->createUnpaidOrders(
+            startDate: Carbon::now()->startOfMonth()->startOfDay(),
+            endDate: Carbon::now()->endOfMonth()->endOfDay(),
+            count: 10,
+        );
+
+        // retrieve orders of the current month should gives us zero orders
+        $paramsData = http_build_query([
+            'page' => 1,
+            'limit' => 15,
+            'desc' => 1,
+            'fixRange' => 'monthly'
+        ]);
+
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/orders/dashboard?'. $paramsData)
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    'total_earnings',
+                    'potential_earnings',
+                    'total_orders',
+                    'chart_data',
+                    'orders',
+                ]
+            ]);
+
+        $this->assertEquals(format_number(Order::sum('amount')), $response->json()['data']['potential_earnings']);
     }
 }
