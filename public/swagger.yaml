@@ -1,0 +1,120 @@
+openapi: 3.0.0
+info:
+  title: Petshop API
+  version: 0.0.1
+servers:
+  - url: http://localhost/api/v1
+components:
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
+paths:
+  /admin/login:
+    post:
+      summary: Admin user login.
+      description: This endpoint will let admin user to login and get the access token.
+      requestBody:
+        description: Created user token
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: admin@buckhill.co.uk
+                password:
+                  type: string
+                  example: admin
+      responses:
+        '200':    # status code
+          description: Returns the token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2OTI1MjI1ODEsIm5iZiI6MTY5MjUyMjU4MSwiZXhwIjoxNjkyNTI2MTgxLCJpc3MiOiJodHRwOi8vbG9jYWxob3N0IiwidXNlclV1aWQiOiI5OWVmMWNiOC1iN2EyLTQyM2QtYjQwNi1iODIwNzQyOWMyYjUifQ.LtmRcPbgeBn_Bw7DGdNR07ShDqQKsStUiDm5sVGEhPA"
+
+        '401':
+          description: Invalid credentials
+
+        '422':
+          description: Validation errors
+
+        '500':
+          description: Server error
+
+  /orders/dashboard:
+    get:
+      summary: admin user dashboard
+      parameters:
+        - in: 'query'
+          name: 'page'
+          schema:
+            type: integer
+          required: true
+          example: 1
+        - in: 'query'
+          name: 'limit'
+          schema:
+            type: integer
+          required: true
+          example: 15
+        - in: 'query'
+          name: 'sortBy'
+          schema:
+            enum: [ uuid, status, customer, ordered_products, amount ]
+            type: string
+          required: false
+          example: uuid
+        - in: 'query'
+          name: 'desc'
+          schema:
+            type: integer
+          required: true
+          example: 1
+        - in: 'query'
+          name: 'fixRange'
+          schema:
+            enum: [ today, monthly, yearly ]
+            type: string
+          required: false
+          example: today
+        - in: 'query'
+          name: 'dateRange'
+          schema:
+            type: object
+            properties:
+              dateRange:
+                type: object
+                properties:
+                  from:
+                    type: string
+                    example: '2023-08-01'
+                  to:
+                    type: string
+                    example: '2023-08-31'
+          required: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application:json:
+              schema:
+                type: object
+
+        '401':
+          description: Unauthorized
+
+        '422':
+          description: Validation errors
+
+        '500':
+          description: Server error
+      security:
+        - bearerAuth: []
