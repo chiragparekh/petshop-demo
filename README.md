@@ -9,7 +9,7 @@ Project contains two endpoints for admin, login and admin dashboard
 Clone git repository
 
 ```sh
-git clone git@github.com:chiragparekh/petshop-demo.git
+git clone https://github.com/chiragparekh/petshop-demo.git
 cd petshop-demo
 cp .env.example .env
 ```
